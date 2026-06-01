@@ -4,8 +4,6 @@ import asyncio
 import json
 import logging
 import os
-import pty
-import fcntl
 import shlex
 import shutil
 import uuid
@@ -97,6 +95,14 @@ async def _exec_shell(command: str, timeout: int = EXEC_TIMEOUT) -> Dict[str, An
 
 async def _generate_pty(cmd: str, timeout: int, request: Request):
     """Run command in a pseudo-TTY so tqdm/progress bars work natively."""
+    try:
+        import pty
+        import fcntl
+    except ImportError:
+        yield f"data: {json.dumps({'stream': 'stderr', 'data': 'PTY execution is not supported on this OS (Windows).'})}\\n\\n"
+        yield f"data: {json.dumps({'exit_code': -1})}\\n\\n"
+        return
+
     loop = asyncio.get_event_loop()
     master_fd, slave_fd = pty.openpty()
 
